@@ -7,6 +7,8 @@ const os = require("node:os");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
+const repoRoot = path.resolve(__dirname, "..", "..");
+
 test("apply-patches CLI writes patch log with module records", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "reasonix-cli-"));
   const workspace = path.join(root, "workspace");
@@ -19,7 +21,7 @@ test("apply-patches CLI writes patch log with module records", () => {
   const plan = path.join(root, "plan.json");
   fs.writeFileSync(plan, JSON.stringify({ applyMinimalEvilPatch: true }));
 
-  execFileSync("node", ["/home/jacky/scripts/release/apply-patches.js", "--plan", plan, "--workspace", workspace], { stdio: "pipe" });
+  execFileSync("node", [path.join(repoRoot, "scripts", "release", "apply-patches.js"), "--plan", plan, "--workspace", workspace], { stdio: "pipe" });
 
   const patchLog = JSON.parse(fs.readFileSync(path.join(workspace, ".reasonix-patch-log.json"), "utf8"));
   assert.equal(Array.isArray(patchLog.modules), true);

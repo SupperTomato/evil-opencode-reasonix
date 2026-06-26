@@ -7,6 +7,8 @@ const os = require("node:os");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
+const repoRoot = path.resolve(__dirname, "..", "..");
+
 function writeJson(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
@@ -52,10 +54,10 @@ test("end-to-end local fixture covers patch, verify, detect-build, and run-build
   fs.writeFileSync(path.join(workspace, "bin.js"), "export const installCommand = 'update';\n");
   writeJson(planPath, { applyMinimalEvilPatch: true, evilReleaseTag: "v1.2.3", resolution: "upstream-fallback" });
 
-  execFileSync("node", ["/home/jacky/scripts/release/apply-patches.js", "--plan", planPath, "--workspace", workspace], { stdio: "pipe" });
-  execFileSync("node", ["/home/jacky/scripts/release/verify-release.js", "--plan", planPath, "--workspace", workspace], { stdio: "pipe" });
-  execFileSync("node", ["/home/jacky/scripts/release/detect-build.js", "--workspace", workspace, "--output", buildPlanPath], { stdio: "pipe" });
-  execFileSync("node", ["/home/jacky/scripts/release/run-build.js", "--workspace", workspace, "--build-plan", buildPlanPath, "--output-dir", artifactDir], { stdio: "pipe" });
+  execFileSync("node", [path.join(repoRoot, "scripts", "release", "apply-patches.js"), "--plan", planPath, "--workspace", workspace], { stdio: "pipe" });
+  execFileSync("node", [path.join(repoRoot, "scripts", "release", "verify-release.js"), "--plan", planPath, "--workspace", workspace], { stdio: "pipe" });
+  execFileSync("node", [path.join(repoRoot, "scripts", "release", "detect-build.js"), "--workspace", workspace, "--output", buildPlanPath], { stdio: "pipe" });
+  execFileSync("node", [path.join(repoRoot, "scripts", "release", "run-build.js"), "--workspace", workspace, "--build-plan", buildPlanPath, "--output-dir", artifactDir], { stdio: "pipe" });
 
   assert.ok(fs.existsSync(path.join(workspace, "built.txt")));
   assert.ok(fs.existsSync(path.join(artifactDir, "build-plan.json")));

@@ -3,13 +3,16 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const path = require("node:path");
+
+const repoRoot = path.resolve(__dirname, "..", "..");
 
 function read(filePath) {
   return fs.readFileSync(filePath, "utf8");
 }
 
 test("build workflow references existing release scripts", () => {
-  const workflow = read("/home/jacky/.github/workflows/build-and-release.yml");
+  const workflow = read(path.join(repoRoot, ".github", "workflows", "build-and-release.yml"));
   const referenced = [
     "scripts/release/resolve-release.js",
     "scripts/release/materialize-source.js",
@@ -22,7 +25,7 @@ test("build workflow references existing release scripts", () => {
 
   for (const relativePath of referenced) {
     assert.match(workflow, new RegExp(relativePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    assert.equal(fs.existsSync(`/home/jacky/${relativePath}`), true);
+    assert.equal(fs.existsSync(path.join(repoRoot, relativePath)), true);
   }
 
   assert.match(workflow, /name: Read build plan/);
@@ -31,8 +34,8 @@ test("build workflow references existing release scripts", () => {
 });
 
 test("poll workflow references the poll script and dispatch target", () => {
-  const workflow = read("/home/jacky/.github/workflows/poll-evil-opencode.yml");
+  const workflow = read(path.join(repoRoot, ".github", "workflows", "poll-evil-opencode.yml"));
   assert.match(workflow, /scripts\/release\/poll-evil-opencode\.js/);
   assert.match(workflow, /workflow_id: "build-and-release\.yml"/);
-  assert.equal(fs.existsSync("/home/jacky/scripts/release/poll-evil-opencode.js"), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, "scripts", "release", "poll-evil-opencode.js")), true);
 });

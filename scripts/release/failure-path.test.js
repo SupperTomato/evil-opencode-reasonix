@@ -7,6 +7,8 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawnSync, execFileSync } = require("node:child_process");
 
+const repoRoot = path.resolve(__dirname, "..", "..");
+
 function writeJson(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
@@ -26,14 +28,14 @@ test("patch drift fails closed and diagnostics still capture the failure context
   fs.writeFileSync(path.join(workspace, "src", "tool-output.ts"), "export function rememberToolOutput(output) {\n  return output;\n}\n");
   writeJson(planPath, { applyMinimalEvilPatch: true, evilReleaseTag: "v9.9.9", resolution: "upstream-fallback" });
 
-  const result = spawnSync("node", ["/home/jacky/scripts/release/apply-patches.js", "--plan", planPath, "--workspace", workspace], {
+  const result = spawnSync("node", [path.join(repoRoot, "scripts", "release", "apply-patches.js"), "--plan", planPath, "--workspace", workspace], {
     encoding: "utf8"
   });
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr || result.stdout, /Reasonix prefix patch failed/);
 
-  execFileSync("node", ["/home/jacky/scripts/release/collect-diagnostics.js", "--plan", planPath, "--workspace", workspace, "--output-dir", outputDir], { stdio: "pipe" });
+  execFileSync("node", [path.join(repoRoot, "scripts", "release", "collect-diagnostics.js"), "--plan", planPath, "--workspace", workspace, "--output-dir", outputDir], { stdio: "pipe" });
 
   assert.equal(fs.existsSync(path.join(outputDir, "release-plan.json")), true);
   assert.equal(fs.existsSync(path.join(outputDir, "verification.json")), true);
@@ -66,7 +68,7 @@ test("evil-source mode fails before Reasonix patching when the evil layer is mis
   );
   writeJson(planPath, { applyMinimalEvilPatch: false, evilReleaseTag: "v1.2.3", resolution: "evil-source" });
 
-  const result = spawnSync("node", ["/home/jacky/scripts/release/apply-patches.js", "--plan", planPath, "--workspace", workspace], {
+  const result = spawnSync("node", [path.join(repoRoot, "scripts", "release", "apply-patches.js"), "--plan", planPath, "--workspace", workspace], {
     encoding: "utf8"
   });
 

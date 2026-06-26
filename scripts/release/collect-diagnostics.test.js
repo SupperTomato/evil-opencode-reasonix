@@ -7,6 +7,8 @@ const os = require("node:os");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
+const repoRoot = path.resolve(__dirname, "..", "..");
+
 test("collect-diagnostics writes plan, verification, and patch artifacts", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "reasonix-diag-"));
   const workspace = path.join(root, "workspace");
@@ -18,7 +20,7 @@ test("collect-diagnostics writes plan, verification, and patch artifacts", () =>
   const plan = path.join(root, "plan.json");
   fs.writeFileSync(plan, JSON.stringify({ evilReleaseTag: "v1.2.3" }));
 
-  execFileSync("node", ["/home/jacky/scripts/release/collect-diagnostics.js", "--plan", plan, "--workspace", workspace, "--output-dir", outputDir], { stdio: "pipe" });
+  execFileSync("node", [path.join(repoRoot, "scripts", "release", "collect-diagnostics.js"), "--plan", plan, "--workspace", workspace, "--output-dir", outputDir], { stdio: "pipe" });
 
   assert.ok(fs.existsSync(path.join(outputDir, "release-plan.json")));
   assert.ok(fs.existsSync(path.join(outputDir, "verification.json")));
