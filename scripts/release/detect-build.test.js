@@ -26,7 +26,7 @@ test("detectBuildPlan selects packages/opencode workspace build for bun monorepo
   );
   fs.writeFileSync(
     path.join(root, "packages", "opencode", "package.json"),
-    JSON.stringify({ scripts: { build: "bun run script/build.ts", test: "bun test" } }),
+    JSON.stringify({ scripts: { build: "bun run script/build.ts", test: "bun test", typecheck: "tsgo --noEmit" } }),
   );
   fs.writeFileSync(path.join(root, "bun.lock"), "");
 
@@ -34,5 +34,5 @@ test("detectBuildPlan selects packages/opencode workspace build for bun monorepo
   assert.equal(plan.packageManagerVersion, "1.3.5");
   assert.deepEqual(plan.install, ["bun", "install", "--frozen-lockfile"]);
   assert.deepEqual(plan.build, ["bun", "run", "--cwd", "packages/opencode", "build"]);
-  assert.deepEqual(plan.test, ["bun", "run", "--cwd", "packages/opencode", "test"]);
+  assert.deepEqual(plan.test, ["bun", "run", "--cwd", "packages/opencode", "typecheck"]);
 });

@@ -49,7 +49,11 @@ function detectBuildPlan(workspace) {
       const opencodePackageJson = readJson(opencodePackagePath);
       const opencodeScripts = opencodePackageJson.scripts || {};
       if (opencodeScripts.build) build = buildScriptCommand(packageManager, "build", "packages/opencode");
-      if (opencodeScripts.test) test = buildScriptCommand(packageManager, "test", "packages/opencode");
+      if (opencodeScripts.typecheck) {
+        test = buildScriptCommand(packageManager, "typecheck", "packages/opencode");
+      } else if (opencodeScripts.test) {
+        test = buildScriptCommand(packageManager, "test", "packages/opencode");
+      }
     }
   }
 
