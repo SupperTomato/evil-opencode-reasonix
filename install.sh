@@ -10,7 +10,7 @@ ARCH=$(uname -m)
 case "$OS" in
   linux)
     case "$ARCH" in
-      x86_64) BINARY="opencode-linux-x64" ;;
+      x86_64) BINARY="opencode" ;;
       aarch64|arm64) BINARY="opencode-linux-arm64" ;;
       *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
     esac
