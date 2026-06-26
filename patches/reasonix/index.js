@@ -9,5 +9,6 @@ module.exports = [
   require("./06-run-file-arg-compat"),
   require("./07-auth-url-error-handling"),
   require("./08-pr-merged-fallback"),
-  require("./09-bun-install-resilience")
+  require("./09-bun-install-resilience"),
+  require("./10-mcp-add-persist")
 ];

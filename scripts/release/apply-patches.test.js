@@ -18,7 +18,8 @@ const modules = [
   require("../../patches/reasonix/06-run-file-arg-compat"),
   require("../../patches/reasonix/07-auth-url-error-handling"),
   require("../../patches/reasonix/08-pr-merged-fallback"),
-  require("../../patches/reasonix/09-bun-install-resilience")
+  require("../../patches/reasonix/09-bun-install-resilience"),
+  require("../../patches/reasonix/10-mcp-add-persist")
 ];
 
 test("patch modules rewrite a compatible source fixture", () => {
@@ -189,6 +190,27 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
     ].join("\n"),
   );
   fs.writeFileSync(
+    path.join(cliDir, "mcp.ts"),
+    [
+      'import path from "path"',
+      'import { Global } from "../../global"',
+      "export const McpAddCommand = cmd({",
+      '  command: "add",',
+      "  async handler() {",
+      '    const name = "fixture-mcp"',
+      '    const command = "echo hi"',
+      '    const clientId = "abc"',
+      '    const clientSecret = "def"',
+      '    const url = "https://example.com/mcp"',
+      '    prompts.log.info(`Local MCP server "${name}" configured with command: ${command}`)',
+      '    prompts.log.info(`Remote MCP server "${name}" configured with OAuth (client ID: ${clientId})`)',
+      '    prompts.log.info(`Remote MCP server "${name}" configured with OAuth (dynamic registration)`)',
+      '    prompts.log.info(`Remote MCP server "${name}" configured with URL: ${url}`)',
+      "  }",
+      "})",
+    ].join("\n"),
+  );
+  fs.writeFileSync(
     path.join(cliDir, "run.ts"),
     [
       "export const RunCommand = cmd({",
@@ -296,5 +318,9 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
   assert.match(
     fs.readFileSync(path.join(bunDir, "index.ts"), "utf8"),
     /REASONIX_BUN_INSTALL_RESILIENCE_MARKER/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(cliDir, "mcp.ts"), "utf8"),
+    /REASONIX_MCP_ADD_PERSIST_MARKER/,
   );
 });
