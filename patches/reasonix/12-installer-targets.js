@@ -13,16 +13,32 @@ function apply(context) {
 
       let next = contents;
       next = next.replace(
+        "curl -fsSL https://opencode.ai/install | bash",
+        `curl -fsSL https://raw.githubusercontent.com/${REASONIX_REPO}/main/install.sh | bash`,
+      );
+      next = next.replace(
         'HttpClientRequest.get("https://opencode.ai/install")',
         `HttpClientRequest.get("https://raw.githubusercontent.com/${REASONIX_REPO}/main/install.sh")`,
+      );
+      next = next.replace(
+        'fetch("https://api.github.com/repos/anomalyco/opencode/releases/latest")',
+        `fetch("https://api.github.com/repos/${REASONIX_REPO}/releases/latest")`,
       );
       next = next.replace(
         'HttpClientRequest.get("https://api.github.com/repos/winmin/evil-opencode/releases/latest").pipe(',
         `HttpClientRequest.get("https://api.github.com/repos/${REASONIX_REPO}/releases/latest").pipe(`,
       );
       next = next.replace(
+        'HttpClientRequest.get("https://api.github.com/repos/anomalyco/opencode/releases/latest").pipe(',
+        `HttpClientRequest.get("https://api.github.com/repos/${REASONIX_REPO}/releases/latest").pipe(`,
+      );
+      next = next.replace(
         'return data.tag_name.replace(/^v/, "").replace(/-unguarded$/, "")',
         'return data.tag_name.replace(/^reasonix-v/, "").replace(/^v/, "").replace(/-unguarded$/, "")',
+      );
+      next = next.replace(
+        '.then((data: any) => data.tag_name.replace(/^v/, ""))',
+        '.then((data: any) => data.tag_name.replace(/^reasonix-v/, "").replace(/^v/, "").replace(/-unguarded$/, ""))',
       );
 
       if (next === contents) return contents;
