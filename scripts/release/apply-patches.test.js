@@ -20,7 +20,8 @@ const modules = [
   require("../../patches/reasonix/08-pr-merged-fallback"),
   require("../../patches/reasonix/09-bun-install-resilience"),
   require("../../patches/reasonix/10-mcp-add-persist"),
-  require("../../patches/reasonix/11-github-reaction-cleanup")
+  require("../../patches/reasonix/11-github-reaction-cleanup"),
+  require("../../patches/reasonix/12-installer-targets")
 ];
 
 test("patch modules rewrite a compatible source fixture", () => {
@@ -47,6 +48,15 @@ test("patch modules rewrite a compatible source fixture", () => {
     "  return output;",
     "}"
   ].join("\n"));
+  fs.mkdirSync(path.join(root, "src", "installation"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "src", "installation", "index.ts"),
+    [
+      'const install = HttpClientRequest.get("https://opencode.ai/install")',
+      'const latest = HttpClientRequest.get("https://api.github.com/repos/winmin/evil-opencode/releases/latest").pipe(',
+      'const version = data.tag_name.replace(/^v/, "").replace(/-unguarded$/, "")',
+    ].join("\n"),
+  );
   fs.writeFileSync(path.join(root, "bin.js"), "export const installCommand = 'update';\n");
 
   const context = createContext(root);
@@ -63,11 +73,13 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
   const pluginDir = path.join(root, "packages", "opencode", "src", "plugin");
   const bunDir = path.join(root, "packages", "opencode", "src", "bun");
   const cliDir = path.join(root, "packages", "opencode", "src", "cli", "cmd");
+  const installationDir = path.join(root, "packages", "opencode", "src", "installation");
   fs.mkdirSync(sessionDir, { recursive: true });
   fs.mkdirSync(providerDir, { recursive: true });
   fs.mkdirSync(pluginDir, { recursive: true });
   fs.mkdirSync(bunDir, { recursive: true });
   fs.mkdirSync(cliDir, { recursive: true });
+  fs.mkdirSync(installationDir, { recursive: true });
 
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fixture", scripts: { build: "node build.js" } }));
   fs.writeFileSync(
@@ -294,6 +306,14 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
       "}",
     ].join("\n"),
   );
+  fs.writeFileSync(
+    path.join(installationDir, "index.ts"),
+    [
+      'const response = yield* httpOk.execute(HttpClientRequest.get("https://opencode.ai/install"))',
+      'const latest = HttpClientRequest.get("https://api.github.com/repos/winmin/evil-opencode/releases/latest").pipe(',
+      'return data.tag_name.replace(/^v/, "").replace(/-unguarded$/, "")',
+    ].join("\n"),
+  );
   fs.writeFileSync(path.join(root, "bin.js"), "export const installCommand = 'update';\n");
 
   const context = createContext(root);
@@ -348,5 +368,9 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
   assert.match(
     fs.readFileSync(path.join(cliDir, "github.ts"), "utf8"),
     /REASONIX_GITHUB_REACTION_CLEANUP_MARKER/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(installationDir, "index.ts"), "utf8"),
+    /REASONIX_INSTALLER_TARGETS_MARKER/,
   );
 });

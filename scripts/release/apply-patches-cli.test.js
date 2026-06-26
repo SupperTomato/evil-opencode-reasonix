@@ -17,6 +17,11 @@ test("apply-patches CLI writes patch log with module records", () => {
   fs.writeFileSync(path.join(workspace, "src", "session.ts"), "export function serializeSession(value) {\n  return JSON.stringify(value);\n}\n");
   fs.writeFileSync(path.join(workspace, "src", "compact.ts"), "export function buildCompactSummary(items) {\n  return items.map((item) => item.summary).join(\"\\n\");\n}\n");
   fs.writeFileSync(path.join(workspace, "src", "tool-output.ts"), "export function rememberToolOutput(output) {\n  return output;\n}\n");
+  fs.mkdirSync(path.join(workspace, "src", "installation"), { recursive: true });
+  fs.writeFileSync(
+    path.join(workspace, "src", "installation", "index.ts"),
+    'const install = HttpClientRequest.get("https://opencode.ai/install")\nconst latest = HttpClientRequest.get("https://api.github.com/repos/winmin/evil-opencode/releases/latest").pipe()\nconst version = data.tag_name.replace(/^v/, "").replace(/-unguarded$/, "")\n',
+  );
   fs.writeFileSync(path.join(workspace, "bin.js"), "export const installCommand = 'update';\n");
   const plan = path.join(root, "plan.json");
   fs.writeFileSync(plan, JSON.stringify({ applyMinimalEvilPatch: true }));
@@ -25,5 +30,5 @@ test("apply-patches CLI writes patch log with module records", () => {
 
   const patchLog = JSON.parse(fs.readFileSync(path.join(workspace, ".reasonix-patch-log.json"), "utf8"));
   assert.equal(Array.isArray(patchLog.modules), true);
-  assert.equal(patchLog.modules.length, 12);
+  assert.equal(patchLog.modules.length, 13);
 });

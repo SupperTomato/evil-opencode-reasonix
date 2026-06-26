@@ -13,6 +13,11 @@ const {
 const evilModules = require("../../../patches/evil");
 const reasonixModules = require("../../../patches/reasonix");
 
+const EXPECTED_INSTALL_URL =
+  "https://raw.githubusercontent.com/SupperTomato/evil-opencode-reasonix/main/install.sh";
+const EXPECTED_LATEST_RELEASE_URL =
+  "https://api.github.com/repos/SupperTomato/evil-opencode-reasonix/releases/latest";
+
 function scanWorkspace(workspaceRoot) {
   return findFiles(workspaceRoot, (filePath) => /\.(cjs|js|json|jsx|mjs|mts|ts|tsx)$/.test(filePath)).map((filePath) => ({
     path: filePath,
@@ -51,10 +56,18 @@ function collectEvilBaseState(workspaceRoot) {
 function collectVerification(workspaceRoot, options = {}) {
   const requireCodexPro = options.requireCodexPro !== false;
   const files = scanWorkspace(workspaceRoot);
+  const installationFiles = files.filter((file) => /installation\/index\.ts$/i.test(file.relative));
   const evilLayerPresent =
     evilModules.every((module) => verifyModuleMarker(files, module)) ||
     detectEvilBase(files);
-  const installerTargetCheck = hasPattern(files, (file) => /install-local|update|uninstall/i.test(file.contents));
+  const installerTargetCheck =
+    installationFiles.length === 0 ||
+    (installationFiles.some((file) => file.contents.includes(EXPECTED_INSTALL_URL)) &&
+      installationFiles.some((file) => file.contents.includes(EXPECTED_LATEST_RELEASE_URL)) &&
+      !installationFiles.some((file) => file.contents.includes("https://opencode.ai/install")) &&
+      !installationFiles.some((file) =>
+        file.contents.includes("https://api.github.com/repos/winmin/evil-opencode/releases/latest"),
+      ));
   const codexproManifestPath = path.join(workspaceRoot, ".reasonix-codexpro.json");
   const codexproMcpPath = path.join(workspaceRoot, ".mcp.json");
   const codexproGuidePath = path.join(workspaceRoot, "docs", "codexpro-ohmyopenagent.md");

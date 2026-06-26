@@ -51,6 +51,15 @@ test("end-to-end local fixture covers patch, verify, detect-build, and run-build
   fs.writeFileSync(path.join(workspace, "src", "session.ts"), "export function serializeSession(value) {\n  return JSON.stringify(value);\n}\n");
   fs.writeFileSync(path.join(workspace, "src", "compact.ts"), "export function buildCompactSummary(items) {\n  return items.map((item) => item.summary).join(\"\\n\");\n}\n");
   fs.writeFileSync(path.join(workspace, "src", "tool-output.ts"), "export function rememberToolOutput(output) {\n  return output;\n}\n");
+  fs.mkdirSync(path.join(workspace, "src", "installation"), { recursive: true });
+  fs.writeFileSync(
+    path.join(workspace, "src", "installation", "index.ts"),
+    [
+      'const response = yield* httpOk.execute(HttpClientRequest.get("https://opencode.ai/install"))',
+      'const latest = HttpClientRequest.get("https://api.github.com/repos/winmin/evil-opencode/releases/latest").pipe(',
+      'return data.tag_name.replace(/^v/, "").replace(/-unguarded$/, "")',
+    ].join("\n"),
+  );
   fs.writeFileSync(path.join(workspace, "bin.js"), "export const installCommand = 'update';\n");
   writeJson(planPath, {
     applyMinimalEvilPatch: true,

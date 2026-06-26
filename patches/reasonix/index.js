@@ -11,5 +11,6 @@ module.exports = [
   require("./08-pr-merged-fallback"),
   require("./09-bun-install-resilience"),
   require("./10-mcp-add-persist"),
-  require("./11-github-reaction-cleanup")
+  require("./11-github-reaction-cleanup"),
+  require("./12-installer-targets")
 ];
