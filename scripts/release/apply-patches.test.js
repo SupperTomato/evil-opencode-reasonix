@@ -153,4 +153,8 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
     fs.readFileSync(path.join(sessionDir, "message-v2.ts"), "utf8"),
     /function reasonixHistoryToolInput/,
   );
+  assert.match(
+    fs.readFileSync(path.join(sessionDir, "message-v2.ts"), "utf8"),
+    /function reasonixPruneStaleReasoning/,
+  );
 });
