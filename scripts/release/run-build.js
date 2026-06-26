@@ -10,19 +10,43 @@ function runCommand(command, cwd) {
   execFileSync(command[0], command.slice(1), { cwd, stdio: "inherit" });
 }
 
-function copyArtifacts(workspace, outputDir) {
+function findDistRoot(workspace) {
   const candidates = [
-    { source: path.join(workspace, "packages", "opencode", "dist"), target: path.join(outputDir, "dist") },
-    { source: path.join(workspace, "dist"), target: path.join(outputDir, "dist") },
+    path.join(workspace, "packages", "opencode", "dist"),
+    path.join(workspace, "dist"),
   ];
 
-  const copied = [];
   for (const candidate of candidates) {
-    if (!fs.existsSync(candidate.source)) continue;
-    ensureDir(path.dirname(candidate.target));
-    fs.cpSync(candidate.source, candidate.target, { recursive: true });
-    copied.push(candidate.target);
-    break;
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+function copyArtifacts(workspace, outputDir) {
+  const distRoot = findDistRoot(workspace);
+  const copied = [];
+  if (!distRoot) return copied;
+
+  for (const entry of fs.readdirSync(distRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const assetDir = path.join(distRoot, entry.name);
+    const unixBinary = path.join(assetDir, "bin", "opencode");
+    const windowsBinary = path.join(assetDir, "bin", "opencode.exe");
+
+    if (fs.existsSync(unixBinary)) {
+      const target = path.join(outputDir, entry.name);
+      ensureDir(path.dirname(target));
+      fs.copyFileSync(unixBinary, target);
+      copied.push(target);
+      continue;
+    }
+
+    if (fs.existsSync(windowsBinary)) {
+      const target = path.join(outputDir, `${entry.name}.exe`);
+      ensureDir(path.dirname(target));
+      fs.copyFileSync(windowsBinary, target);
+      copied.push(target);
+    }
   }
 
   return copied;

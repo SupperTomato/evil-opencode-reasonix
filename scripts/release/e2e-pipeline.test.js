@@ -82,7 +82,7 @@ test("end-to-end local fixture covers patch, verify, detect-build, and run-build
   assert.ok(fs.existsSync(path.join(workspace, "built.txt")));
   assert.ok(fs.existsSync(path.join(artifactDir, "build-plan.json")));
   assert.ok(fs.existsSync(path.join(artifactDir, "artifacts.json")));
-  assert.ok(fs.existsSync(path.join(artifactDir, "dist", "opencode-linux-x64", "bin", "opencode")));
+  assert.ok(fs.existsSync(path.join(artifactDir, "opencode-linux-x64")));
   assert.ok(fs.existsSync(path.join(artifactDir, "verification.json")));
   assert.ok(fs.existsSync(path.join(artifactDir, "support", ".mcp.json")));
   assert.ok(fs.existsSync(path.join(artifactDir, "support", "codexpro-manifest.json")));
