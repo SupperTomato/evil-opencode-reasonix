@@ -19,6 +19,10 @@ function hasPattern(files, predicate) {
 }
 
 function verifyModuleMarker(files, module) {
+  if (Array.isArray(module.applicabilityMatchers) && module.applicabilityMatchers.length > 0) {
+    const applicable = files.some((file) => module.applicabilityMatchers.some((matcher) => matcher.test(file.relative)));
+    if (!applicable) return true;
+  }
   return hasPattern(files, (file) => new RegExp(module.marker).test(file.contents));
 }
 

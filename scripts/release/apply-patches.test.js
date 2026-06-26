@@ -13,7 +13,8 @@ const modules = [
   require("../../patches/reasonix/01-reasonix-prefix"),
   require("../../patches/reasonix/02-reasonix-session-shape"),
   require("../../patches/reasonix/03-reasonix-compaction"),
-  require("../../patches/reasonix/04-reasonix-tool-output-hygiene")
+  require("../../patches/reasonix/04-reasonix-tool-output-hygiene"),
+  require("../../patches/reasonix/05-plugin-loader-compat")
 ];
 
 test("patch modules rewrite a compatible source fixture", () => {
@@ -53,8 +54,10 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "reasonix-live-patch-"));
   const sessionDir = path.join(root, "packages", "opencode", "src", "session");
   const providerDir = path.join(root, "packages", "opencode", "src", "provider");
+  const pluginDir = path.join(root, "packages", "opencode", "src", "plugin");
   fs.mkdirSync(sessionDir, { recursive: true });
   fs.mkdirSync(providerDir, { recursive: true });
+  fs.mkdirSync(pluginDir, { recursive: true });
 
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fixture", scripts: { build: "node build.js" } }));
   fs.writeFileSync(
@@ -134,6 +137,24 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
       "}",
     ].join("\n"),
   );
+  fs.writeFileSync(
+    path.join(pluginDir, "index.ts"),
+    [
+      "export async function load(plugin, input, hooks) {",
+      "      const mod = await import(plugin)",
+      "      // Prevent duplicate initialization when plugins export the same function",
+      "      // as both a named export and default export (e.g., `export const X` and `export default X`).",
+      "      // Object.entries(mod) would return both entries pointing to the same function reference.",
+      "      const seen = new Set<PluginInstance>()",
+      "      for (const [_name, fn] of Object.entries<PluginInstance>(mod)) {",
+      "        if (seen.has(fn)) continue",
+      "        seen.add(fn)",
+      "        const init = await fn(input)",
+      "        hooks.push(init)",
+      "      }",
+      "}",
+    ].join("\n"),
+  );
   fs.writeFileSync(path.join(root, "bin.js"), "export const installCommand = 'update';\n");
 
   const context = createContext(root);
@@ -156,5 +177,9 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
   assert.match(
     fs.readFileSync(path.join(sessionDir, "message-v2.ts"), "utf8"),
     /function reasonixPruneStaleReasoning/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(pluginDir, "index.ts"), "utf8"),
+    /REASONIX_PLUGIN_LOADER_COMPAT_MARKER/,
   );
 });
