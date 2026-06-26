@@ -46,6 +46,9 @@ jobs:
       - name: Apply evil/reasonix patches
         run: node scripts/release/apply-patches.js --plan "$RUNNER_TEMP/release-plan.json" --workspace "$RUNNER_TEMP/source"
 
+      - name: Integrate CodexPro companion
+        run: node scripts/release/integrate-codexpro.js --plan "$RUNNER_TEMP/release-plan.json" --workspace "$RUNNER_TEMP/source"
+
       - name: Verify patched source
         run: node scripts/release/verify-release.js --plan "$RUNNER_TEMP/release-plan.json" --workspace "$RUNNER_TEMP/source"
 

@@ -8,6 +8,16 @@ It does three things:
 - resolves the matching source state or falls back to upstream OpenCode when needed
 - applies a Reasonix cache-preservation patch layer before building and releasing
 
+It now also materializes a CodexPro companion layer for `oh-my-openagent` users:
+
+- generates an OMO-compatible `.mcp.json` entry for `codexpro-mcp`
+- pins CodexPro support to `0.28.5`
+- uses CodexPro full mode so `codex_context` is available
+- configures CodexPro with `write=handoff` and `bash=off` by default
+
+In CodexPro full mode those restrictions are enforced at tool-call time; they do not remove
+`write`, `edit`, or `bash` from the advertised full-mode tool catalog.
+
 ## Cache Audit
 
 Live upstream research found three cache-hit behaviors that matter for current OpenCode-based releases:
@@ -30,5 +40,6 @@ Live validation performed against `winmin/evil-opencode` `v1.17.11-unguarded`:
 
 - source resolution succeeds
 - Reasonix patch application succeeds
+- CodexPro integration assets generate successfully
 - release verification succeeds
 - patched `packages/opencode` passes `bun run --cwd packages/opencode typecheck`

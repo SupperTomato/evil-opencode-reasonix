@@ -28,6 +28,28 @@ function copyArtifacts(workspace, outputDir) {
   return copied;
 }
 
+function copySupportAssets(workspace, outputDir) {
+  const supportDir = path.join(outputDir, "support");
+  const candidates = [
+    { source: path.join(workspace, ".mcp.json"), target: path.join(supportDir, ".mcp.json") },
+    { source: path.join(workspace, ".reasonix-codexpro.json"), target: path.join(supportDir, "codexpro-manifest.json") },
+    {
+      source: path.join(workspace, "docs", "codexpro-ohmyopenagent.md"),
+      target: path.join(supportDir, "docs", "codexpro-ohmyopenagent.md"),
+    },
+  ];
+
+  const copied = [];
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate.source)) continue;
+    ensureDir(path.dirname(candidate.target));
+    fs.copyFileSync(candidate.source, candidate.target);
+    copied.push(candidate.target);
+  }
+
+  return copied;
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const workspace = args.workspace;
@@ -44,8 +66,9 @@ function main() {
 
   ensureDir(outputDir);
   const copiedArtifacts = copyArtifacts(workspace, outputDir);
+  const copiedSupportAssets = copySupportAssets(workspace, outputDir);
   writeJson(path.join(outputDir, "build-plan.json"), buildPlan);
-  writeJson(path.join(outputDir, "artifacts.json"), { copiedArtifacts });
+  writeJson(path.join(outputDir, "artifacts.json"), { copiedArtifacts, copiedSupportAssets });
   fs.copyFileSync(path.join(workspace, ".reasonix-verification.json"), path.join(outputDir, "verification.json"));
 }
 

@@ -3,6 +3,13 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { findFiles } = require("./fs");
+const {
+  CODEXPRO_BASH_MODE,
+  CODEXPRO_FULL_TOOL_NAMES,
+  CODEXPRO_TOOL_MODE,
+  CODEXPRO_WRITE_MODE,
+  isOmoCompatibleCodexProConfig,
+} = require("./codexpro");
 const evilModules = require("../../../patches/evil");
 const reasonixModules = require("../../../patches/reasonix");
 
@@ -41,16 +48,44 @@ function collectEvilBaseState(workspaceRoot) {
   };
 }
 
-function collectVerification(workspaceRoot) {
+function collectVerification(workspaceRoot, options = {}) {
+  const requireCodexPro = options.requireCodexPro !== false;
   const files = scanWorkspace(workspaceRoot);
   const evilLayerPresent =
     evilModules.every((module) => verifyModuleMarker(files, module)) ||
     detectEvilBase(files);
   const installerTargetCheck = hasPattern(files, (file) => /install-local|update|uninstall/i.test(file.contents));
+  const codexproManifestPath = path.join(workspaceRoot, ".reasonix-codexpro.json");
+  const codexproMcpPath = path.join(workspaceRoot, ".mcp.json");
+  const codexproGuidePath = path.join(workspaceRoot, "docs", "codexpro-ohmyopenagent.md");
+
+  let codexproManifest = null;
+  let codexproMcp = null;
+  try {
+    if (fs.existsSync(codexproManifestPath)) codexproManifest = JSON.parse(fs.readFileSync(codexproManifestPath, "utf8"));
+  } catch {
+    codexproManifest = null;
+  }
+  try {
+    if (fs.existsSync(codexproMcpPath)) codexproMcp = JSON.parse(fs.readFileSync(codexproMcpPath, "utf8"));
+  } catch {
+    codexproMcp = null;
+  }
 
   const results = {
     evilLayerPresent,
-    installerTargetCheck
+    installerTargetCheck,
+    codexproManifestPresent: requireCodexPro ? Boolean(codexproManifest) : true,
+    codexproMcpPresent: requireCodexPro ? Boolean(codexproMcp) : true,
+    codexproGuidePresent: requireCodexPro ? fs.existsSync(codexproGuidePath) : true,
+    codexproToolModeCheck: requireCodexPro ? codexproManifest?.toolMode === CODEXPRO_TOOL_MODE : true,
+    codexproWriteModeCheck: requireCodexPro ? codexproManifest?.writeMode === CODEXPRO_WRITE_MODE : true,
+    codexproBashModeCheck: requireCodexPro ? codexproManifest?.bashMode === CODEXPRO_BASH_MODE : true,
+    codexproToolCatalogCheck: requireCodexPro
+      ? Array.isArray(codexproManifest?.expectedTools) &&
+        codexproManifest.expectedTools.join(",") === CODEXPRO_FULL_TOOL_NAMES.join(",")
+      : true,
+    codexproOmoCompatibilityCheck: requireCodexPro ? isOmoCompatibleCodexProConfig(codexproMcp) : true,
   };
 
   for (const module of reasonixModules) {

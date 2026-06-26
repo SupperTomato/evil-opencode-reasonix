@@ -13,4 +13,6 @@ test("collectVerification fails when required markers are missing", () => {
   const verification = collectVerification(root);
   assert.equal(verification.ok, false);
   assert.equal(verification.results.REASONIX_STABLE_PREFIX_MARKER, false);
+  assert.equal(verification.results.codexproManifestPresent, false);
+  assert.equal(verification.results.codexproOmoCompatibilityCheck, false);
 });

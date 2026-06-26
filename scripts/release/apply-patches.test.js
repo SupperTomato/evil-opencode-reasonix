@@ -52,7 +52,7 @@ test("patch modules rewrite a compatible source fixture", () => {
   const context = createContext(root);
   for (const module of modules) module.apply(context);
 
-  const verification = collectVerification(root);
+  const verification = collectVerification(root, { requireCodexPro: false });
   assert.equal(verification.ok, true);
 });
 
@@ -299,7 +299,7 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
   const context = createContext(root);
   for (const module of modules) module.apply(context);
 
-  const verification = collectVerification(root);
+  const verification = collectVerification(root, { requireCodexPro: false });
   assert.equal(verification.ok, true);
   assert.match(
     fs.readFileSync(path.join(providerDir, "transform.ts"), "utf8"),

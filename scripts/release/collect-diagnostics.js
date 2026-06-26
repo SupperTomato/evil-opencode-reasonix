@@ -29,6 +29,8 @@ function main() {
     fs.writeFileSync(path.join(outputDir, "workspace.diff"), safeGitDiff(workspace));
     copyFileIfPresent(path.join(workspace, ".reasonix-patch-log.json"), path.join(outputDir, "patch-log.json"));
     copyFileIfPresent(path.join(workspace, ".reasonix-release-manifest.json"), path.join(outputDir, "source-manifest.json"));
+    copyFileIfPresent(path.join(workspace, ".reasonix-codexpro.json"), path.join(outputDir, "codexpro-manifest.json"));
+    copyFileIfPresent(path.join(workspace, ".mcp.json"), path.join(outputDir, "mcp.json"));
   }
 }
 

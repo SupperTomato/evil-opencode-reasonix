@@ -52,9 +52,20 @@ test("end-to-end local fixture covers patch, verify, detect-build, and run-build
   fs.writeFileSync(path.join(workspace, "src", "compact.ts"), "export function buildCompactSummary(items) {\n  return items.map((item) => item.summary).join(\"\\n\");\n}\n");
   fs.writeFileSync(path.join(workspace, "src", "tool-output.ts"), "export function rememberToolOutput(output) {\n  return output;\n}\n");
   fs.writeFileSync(path.join(workspace, "bin.js"), "export const installCommand = 'update';\n");
-  writeJson(planPath, { applyMinimalEvilPatch: true, evilReleaseTag: "v1.2.3", resolution: "upstream-fallback" });
+  writeJson(planPath, {
+    applyMinimalEvilPatch: true,
+    evilReleaseTag: "v1.2.3",
+    resolution: "upstream-fallback",
+    codexpro: {
+      version: "0.28.5",
+      toolMode: "full",
+      writeMode: "handoff",
+      bashMode: "off",
+    },
+  });
 
   execFileSync("node", [path.join(repoRoot, "scripts", "release", "apply-patches.js"), "--plan", planPath, "--workspace", workspace], { stdio: "pipe" });
+  execFileSync("node", [path.join(repoRoot, "scripts", "release", "integrate-codexpro.js"), "--plan", planPath, "--workspace", workspace], { stdio: "pipe" });
   execFileSync("node", [path.join(repoRoot, "scripts", "release", "verify-release.js"), "--plan", planPath, "--workspace", workspace], { stdio: "pipe" });
   execFileSync("node", [path.join(repoRoot, "scripts", "release", "detect-build.js"), "--workspace", workspace, "--output", buildPlanPath], { stdio: "pipe" });
   execFileSync("node", [path.join(repoRoot, "scripts", "release", "run-build.js"), "--workspace", workspace, "--build-plan", buildPlanPath, "--output-dir", artifactDir], { stdio: "pipe" });
@@ -64,4 +75,7 @@ test("end-to-end local fixture covers patch, verify, detect-build, and run-build
   assert.ok(fs.existsSync(path.join(artifactDir, "artifacts.json")));
   assert.ok(fs.existsSync(path.join(artifactDir, "dist", "opencode-linux-x64", "bin", "opencode")));
   assert.ok(fs.existsSync(path.join(artifactDir, "verification.json")));
+  assert.ok(fs.existsSync(path.join(artifactDir, "support", ".mcp.json")));
+  assert.ok(fs.existsSync(path.join(artifactDir, "support", "codexpro-manifest.json")));
+  assert.ok(fs.existsSync(path.join(artifactDir, "support", "docs", "codexpro-ohmyopenagent.md")));
 });

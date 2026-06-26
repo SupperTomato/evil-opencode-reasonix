@@ -17,6 +17,7 @@ test("build workflow references existing release scripts", () => {
     "scripts/release/resolve-release.js",
     "scripts/release/materialize-source.js",
     "scripts/release/apply-patches.js",
+    "scripts/release/integrate-codexpro.js",
     "scripts/release/verify-release.js",
     "scripts/release/detect-build.js",
     "scripts/release/run-build.js",
@@ -29,6 +30,7 @@ test("build workflow references existing release scripts", () => {
   }
 
   assert.match(workflow, /name: Read build plan/);
+  assert.match(workflow, /name: Integrate CodexPro companion/);
   assert.match(workflow, /uses: oven-sh\/setup-bun@v2/);
   assert.match(workflow, /package_manager_version/);
 });

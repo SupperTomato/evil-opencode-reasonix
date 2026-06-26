@@ -4,6 +4,12 @@ const { parseArgs } = require("./lib/args");
 const { writeJson } = require("./lib/fs");
 const { githubJson, resolveGitHubToken } = require("./lib/github");
 const {
+  CODEXPRO_BASH_MODE,
+  CODEXPRO_TOOL_MODE,
+  CODEXPRO_VERSION,
+  CODEXPRO_WRITE_MODE,
+} = require("./lib/codexpro");
+const {
   EVIL_REPO,
   UPSTREAM_REPO,
   normalizeOpenCodeVersion,
@@ -33,6 +39,13 @@ async function main() {
   const evilRefs = [...tags, ...branches].map((entry) => entry.ref);
   const upstreamRefs = [...upstreamTags, ...upstreamGithubTags].map((entry) => entry.ref);
   const plan = resolveSourcePlan({ evilTag, evilRelease: release, evilRefs, upstreamRefs, sourceMode });
+  plan.codexpro = {
+    version: CODEXPRO_VERSION,
+    toolMode: CODEXPRO_TOOL_MODE,
+    writeMode: CODEXPRO_WRITE_MODE,
+    bashMode: CODEXPRO_BASH_MODE,
+    integration: "omo-mcp-sidecar",
+  };
   writeJson(output, plan);
   console.log(JSON.stringify(plan, null, 2));
 }
