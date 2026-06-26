@@ -19,7 +19,8 @@ const modules = [
   require("../../patches/reasonix/07-auth-url-error-handling"),
   require("../../patches/reasonix/08-pr-merged-fallback"),
   require("../../patches/reasonix/09-bun-install-resilience"),
-  require("../../patches/reasonix/10-mcp-add-persist")
+  require("../../patches/reasonix/10-mcp-add-persist"),
+  require("../../patches/reasonix/11-github-reaction-cleanup")
 ];
 
 test("patch modules rewrite a compatible source fixture", () => {
@@ -190,6 +191,27 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
     ].join("\n"),
   );
   fs.writeFileSync(
+    path.join(cliDir, "github.ts"),
+    [
+      'const WORKFLOW_FILE = ".github/workflows/opencode.yml"',
+      'const AGENT_USERNAME = "opencode-agent[bot]"',
+      'const actor = "SupperTomato"',
+      "const useGithubToken = true",
+      "async function removeReaction() {",
+      "  if (triggerCommentId) {",
+      "    const reactions = await octoRest.rest.reactions.listForIssueComment({ owner, repo, comment_id: triggerCommentId!, content: AGENT_REACTION })",
+      "    const eyesReaction = reactions.data.find((r) => r.user?.login === AGENT_USERNAME)",
+      "    if (!eyesReaction) return",
+      "    return await octoRest.rest.reactions.deleteForIssueComment({ owner, repo, comment_id: triggerCommentId!, reaction_id: eyesReaction.id })",
+      "  }",
+      "  const reactions = await octoRest.rest.reactions.listForIssue({ owner, repo, issue_number: issueId!, content: AGENT_REACTION })",
+      "  const eyesReaction = reactions.data.find((r) => r.user?.login === AGENT_USERNAME)",
+      "  if (!eyesReaction) return",
+      "  await octoRest.rest.reactions.deleteForIssue({ owner, repo, issue_number: issueId!, reaction_id: eyesReaction.id })",
+      "}",
+    ].join("\n"),
+  );
+  fs.writeFileSync(
     path.join(cliDir, "mcp.ts"),
     [
       'import path from "path"',
@@ -322,5 +344,9 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
   assert.match(
     fs.readFileSync(path.join(cliDir, "mcp.ts"), "utf8"),
     /REASONIX_MCP_ADD_PERSIST_MARKER/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(cliDir, "github.ts"), "utf8"),
+    /REASONIX_GITHUB_REACTION_CLEANUP_MARKER/,
   );
 });

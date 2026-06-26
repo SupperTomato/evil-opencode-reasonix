@@ -25,5 +25,5 @@ test("apply-patches CLI writes patch log with module records", () => {
 
   const patchLog = JSON.parse(fs.readFileSync(path.join(workspace, ".reasonix-patch-log.json"), "utf8"));
   assert.equal(Array.isArray(patchLog.modules), true);
-  assert.equal(patchLog.modules.length, 11);
+  assert.equal(patchLog.modules.length, 12);
 });
