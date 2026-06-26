@@ -1,0 +1,7 @@
+{
+  "name": "evil-opencode-reasonix-pipeline",
+  "private": true,
+  "scripts": {
+    "test": "node --test scripts/release/**/*.test.js"
+  }
+}

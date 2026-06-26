@@ -1,0 +1,104 @@
+name: Build And Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      evil_release_tag:
+        description: winmin/evil-opencode release tag to build from
+        required: true
+        type: string
+      source_mode:
+        description: auto | prefer-evil-source | force-upstream-fallback
+        required: false
+        default: auto
+        type: string
+      dry_run:
+        description: Skip GitHub release publishing
+        required: false
+        default: "false"
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EVIL_RELEASE_TAG: ${{ inputs.evil_release_tag }}
+      SOURCE_MODE: ${{ inputs.source_mode }}
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Resolve source plan
+        run: node scripts/release/resolve-release.js --evil-tag "$EVIL_RELEASE_TAG" --source-mode "$SOURCE_MODE" --output "$RUNNER_TEMP/release-plan.json"
+
+      - name: Materialize source
+        run: node scripts/release/materialize-source.js --plan "$RUNNER_TEMP/release-plan.json" --workspace "$RUNNER_TEMP/source"
+
+      - name: Apply evil/reasonix patches
+        run: node scripts/release/apply-patches.js --plan "$RUNNER_TEMP/release-plan.json" --workspace "$RUNNER_TEMP/source"
+
+      - name: Verify patched source
+        run: node scripts/release/verify-release.js --plan "$RUNNER_TEMP/release-plan.json" --workspace "$RUNNER_TEMP/source"
+
+      - name: Detect build
+        run: node scripts/release/detect-build.js --workspace "$RUNNER_TEMP/source" --output "$RUNNER_TEMP/build-plan.json"
+
+      - name: Read build plan
+        id: build-plan
+        run: |
+          node -e 'const fs=require("node:fs"); const plan=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); fs.appendFileSync(process.env.GITHUB_OUTPUT, `package_manager=${plan.packageManager}\n`); fs.appendFileSync(process.env.GITHUB_OUTPUT, `package_manager_version=${plan.packageManagerVersion || "latest"}\n`);' "$RUNNER_TEMP/build-plan.json"
+
+      - name: Setup Bun
+        if: steps.build-plan.outputs.package_manager == 'bun'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ steps.build-plan.outputs.package_manager_version }}
+
+      - name: Run build
+        run: node scripts/release/run-build.js --workspace "$RUNNER_TEMP/source" --build-plan "$RUNNER_TEMP/build-plan.json" --output-dir "$RUNNER_TEMP/artifacts"
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-build-${{ inputs.evil_release_tag }}
+          path: ${{ runner.temp }}/artifacts
+
+      - name: Publish release
+        if: inputs.dry_run != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: reasonix-${{ inputs.evil_release_tag }}
+          name: reasonix-${{ inputs.evil_release_tag }}
+          files: ${{ runner.temp }}/artifacts/**
+          body: |
+            Built from `winmin/evil-opencode` release `${{ inputs.evil_release_tag }}`.
+            The pipeline applied the Reasonix patch layer and passed post-patch verification.
+
+      - name: Collect diagnostics on failure
+        if: failure()
+        run: node scripts/release/collect-diagnostics.js --plan "$RUNNER_TEMP/release-plan.json" --workspace "$RUNNER_TEMP/source" --output-dir "repair/${{ inputs.evil_release_tag }}"
+
+      - name: Open repair PR on failure
+        if: failure()
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "repair: investigate ${{ inputs.evil_release_tag }} patch drift"
+          title: "Repair evil-opencode patch drift for ${{ inputs.evil_release_tag }}"
+          body: |
+            The release pipeline failed while applying or verifying the Reasonix patch layer.
+
+            Included in this PR:
+            - source resolution plan
+            - patched/unpatched diff
+            - verifier failures
+            - build detection snapshot
+          branch: repair/${{ inputs.evil_release_tag }}-${{ github.run_id }}
