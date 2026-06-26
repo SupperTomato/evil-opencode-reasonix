@@ -63,14 +63,38 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
       "// @ts-ignore",
       "globalThis.AI_SDK_LOG_WARNINGS = false",
       "",
-      "export async function callProcessor(SystemPrompt, processor, MessageV2, sessionMessages, isLastStep, MAX_STEPS) {",
-      "  return processor.process({",
-      "    system: [...(await SystemPrompt.environment()), ...(await SystemPrompt.custom())],",
-      "    messages: [",
-      "      ...MessageV2.toModelMessage(sessionMessages),",
-      "      ...(isLastStep ? [{ role: \"assistant\", content: MAX_STEPS }] : []),",
-      "    ],",
-      "  })",
+      "export namespace SessionPrompt {",
+      "  export async function callProcessor(SystemPrompt, processor, MessageV2, sessionMessages, isLastStep, MAX_STEPS, session, tools, model) {",
+      "    const resolvedTools = await resolveTools({",
+      "      session,",
+      "      tools,",
+      "      model,",
+      "      agent: { name: \"fixture\" },",
+      "      processor,",
+      "      userInvokedAgents: [],",
+      "    })",
+      "    return processor.process({",
+      "      system: [...(await SystemPrompt.environment()), ...(await SystemPrompt.custom())],",
+      "      messages: [",
+      "        ...MessageV2.toModelMessage(sessionMessages),",
+      "        ...(isLastStep ? [{ role: \"assistant\", content: MAX_STEPS }] : []),",
+      "      ],",
+      "      tools: resolvedTools,",
+      "      model,",
+      "    })",
+      "  }",
+      "",
+      "  async function resolveTools(input: {",
+      "    agent: any",
+      "    model: any",
+      "    session: any",
+      "    tools?: Record<string, boolean>",
+      "    processor: any",
+      "    userInvokedAgents: string[]",
+      "  }) {",
+      "    const tools = { zeta: 1, alpha: 2 }",
+      "    return tools",
+      "  }",
       "}",
     ].join("\n"),
   );
@@ -117,4 +141,16 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
 
   const verification = collectVerification(root);
   assert.equal(verification.ok, true);
+  assert.match(
+    fs.readFileSync(path.join(providerDir, "transform.ts"), "utf8"),
+    /parentKey === "required" \|\| parentKey === "dependentRequired"/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(sessionDir, "prompt.ts"), "utf8"),
+    /function reasonixStableToolMap/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(sessionDir, "message-v2.ts"), "utf8"),
+    /function reasonixHistoryToolInput/,
+  );
 });

@@ -12,13 +12,19 @@ function patchProviderTransform(contents) {
         "",
         `const ${module.exports.marker} = "reasonix-session-shape-v1"`,
         "",
-        "function reasonixStableSchema(value: any): any {",
-        "  if (Array.isArray(value)) return value.map(reasonixStableSchema)",
+        "function reasonixStableSchema(value: any, parentKey?: string): any {",
+        "  if (Array.isArray(value)) {",
+        '    const mapped = value.map((item) => reasonixStableSchema(item))',
+        '    if ((parentKey === "required" || parentKey === "dependentRequired") && mapped.every((item) => item == null || ["string", "number", "boolean"].includes(typeof item))) {',
+        "      return [...mapped].sort((a, b) => String(a).localeCompare(String(b)))",
+        "    }",
+        "    return mapped",
+        "  }",
         "  if (!value || typeof value !== \"object\") return value",
         "  return Object.fromEntries(",
         "    Object.keys(value)",
         "      .sort()",
-        "      .map((key) => [key, reasonixStableSchema(value[key])]),",
+        "      .map((key) => [key, reasonixStableSchema(value[key], key)]),",
         "  )",
         "}",
       ].join("\n"),
@@ -111,6 +117,20 @@ function patchProcessor(contents) {
 function patchPrompt(contents) {
   if (!contents.includes("export namespace SessionPrompt {")) return null;
   let next = contents;
+  if (!next.includes("function reasonixStableToolMap(")) {
+    next = next.replace(
+      "export namespace SessionPrompt {\n",
+      [
+        "export namespace SessionPrompt {",
+        "  function reasonixStableToolMap<T>(tools: Record<string, T>) {",
+        "    return Object.fromEntries(",
+        "      Object.entries(tools).sort(([left], [right]) => left.localeCompare(right)),",
+        "    ) as Record<string, T>",
+        "  }",
+        "",
+      ].join("\n"),
+    );
+  }
   next = next.replace(
     "      const result = await SessionCompaction.process({\n          messages: msgs,\n          parentID: lastUser.id,\n          abort,\n          sessionID,\n          auto: task.auto,\n        })\n",
     [
@@ -180,6 +200,7 @@ function patchPrompt(contents) {
     "          sessionID: input.session.id,\n          callID: ctx.callID,\n",
     '          sessionID: input.session.id,\n          callID: ctx.callID,\n',
   );
+  next = next.replace("    return tools\n", "    return reasonixStableToolMap(tools)\n");
   return next !== contents ? next : null;
 }
 

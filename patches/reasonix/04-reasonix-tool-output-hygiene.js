@@ -33,11 +33,33 @@ function apply(context) {
               "    if (text.length <= 4000) return text",
               "    return `${text.slice(0, 4000)}\\n...[truncated by Reasonix hygiene]`",
               "  }",
+              "",
+              "  function reasonixHistoryToolInput(input: any): any {",
+              "    if (Array.isArray(input)) return input.map(reasonixHistoryToolInput)",
+              "    if (!input || typeof input !== \"object\") {",
+              "      if (typeof input === \"string\" && input.length > 300) {",
+              "        const lines = (input.match(/\\n/g) ?? []).length",
+              "        return `[…shrunk: ${input.length} chars, ${lines} lines — see original tool call in session data]`",
+              "      }",
+              "      return input",
+              "    }",
+              "    return Object.fromEntries(",
+              "      Object.entries(input).map(([key, value]) => [key, reasonixHistoryToolInput(value)]),",
+              "    )",
+              "  }",
             ].join("\n"),
+          )
+          .replace(
+            "                input: part.state.input,\n",
+            "                input: reasonixHistoryToolInput(part.state.input),\n",
           )
           .replace(
             '                output: part.state.time.compacted ? "[Old tool result content cleared]" : part.state.output,',
             '                output: part.state.time.compacted ? "[Old tool result content cleared]" : reasonixHistoryToolOutput(part.state.output),',
+          )
+          .replace(
+            "                input: part.state.input,\n",
+            "                input: reasonixHistoryToolInput(part.state.input),\n",
           );
       }
       return contents;
