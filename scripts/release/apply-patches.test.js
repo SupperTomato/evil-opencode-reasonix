@@ -14,7 +14,11 @@ const modules = [
   require("../../patches/reasonix/02-reasonix-session-shape"),
   require("../../patches/reasonix/03-reasonix-compaction"),
   require("../../patches/reasonix/04-reasonix-tool-output-hygiene"),
-  require("../../patches/reasonix/05-plugin-loader-compat")
+  require("../../patches/reasonix/05-plugin-loader-compat"),
+  require("../../patches/reasonix/06-run-file-arg-compat"),
+  require("../../patches/reasonix/07-auth-url-error-handling"),
+  require("../../patches/reasonix/08-pr-merged-fallback"),
+  require("../../patches/reasonix/09-bun-install-resilience")
 ];
 
 test("patch modules rewrite a compatible source fixture", () => {
@@ -55,9 +59,13 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
   const sessionDir = path.join(root, "packages", "opencode", "src", "session");
   const providerDir = path.join(root, "packages", "opencode", "src", "provider");
   const pluginDir = path.join(root, "packages", "opencode", "src", "plugin");
+  const bunDir = path.join(root, "packages", "opencode", "src", "bun");
+  const cliDir = path.join(root, "packages", "opencode", "src", "cli", "cmd");
   fs.mkdirSync(sessionDir, { recursive: true });
   fs.mkdirSync(providerDir, { recursive: true });
   fs.mkdirSync(pluginDir, { recursive: true });
+  fs.mkdirSync(bunDir, { recursive: true });
+  fs.mkdirSync(cliDir, { recursive: true });
 
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fixture", scripts: { build: "node build.js" } }));
   fs.writeFileSync(
@@ -155,6 +163,93 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
       "}",
     ].join("\n"),
   );
+  fs.writeFileSync(
+    path.join(bunDir, "index.ts"),
+    [
+      'import path from "path"',
+      "export namespace BunProc {",
+      '  const log = { warn() {} }',
+      '  const parsed = { dependencies: {} as Record<string, string> }',
+      '  const mod = path.join("cache", "node_modules", "fixture-plugin")',
+      '  const pkg = "fixture-plugin"',
+      '  const version = "latest"',
+      "  async function install() {",
+      "    await BunProc.run(args, {",
+      "      cwd: Global.Path.cache,",
+      "    }).catch((e) => {",
+      "      throw new InstallFailedError(",
+      "        { pkg, version },",
+      "        {",
+      "          cause: e,",
+      "        },",
+      "      )",
+      "    })",
+      "  }",
+      "}",
+    ].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(cliDir, "run.ts"),
+    [
+      "export const RunCommand = cmd({",
+      '  command: "run [message..]",',
+      "  builder: (yargs) => {",
+      "    return yargs",
+      '      .option("file", {',
+      '        alias: ["f"],',
+      '        type: "string",',
+      "        array: true,",
+      '        describe: "file(s) to attach to message",',
+      "      })",
+      "  }",
+      "})",
+    ].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(cliDir, "auth.ts"),
+    [
+      "async function auth(args, prompts, Auth, Bun) {",
+      "  if (args.url) {",
+      '    const wellknown = await fetch(`${args.url}/.well-known/opencode`).then((x) => x.json() as any)',
+      '    prompts.log.info(`Running \\`${wellknown.auth.command.join(" ")}\\``)',
+      "    const proc = Bun.spawn({",
+      "      cmd: wellknown.auth.command,",
+      '      stdout: "pipe",',
+      "    })",
+      "    const exit = await proc.exited",
+      "    if (exit !== 0) {",
+      '      prompts.log.error("Failed")',
+      '      prompts.outro("Done")',
+      "      return",
+      "    }",
+      "    const token = await new Response(proc.stdout).text()",
+      "    await Auth.set(args.url, {",
+      '      type: "wellknown",',
+      "      key: wellknown.auth.env,",
+      "      token: token.trim(),",
+      "    })",
+      '    prompts.log.success("Logged into " + args.url)',
+      '    prompts.outro("Done")',
+      "    return",
+      "  }",
+      "}",
+    ].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(cliDir, "pr.ts"),
+    [
+      "async function pr(prNumber, UI, $) {",
+      "  const localBranchName = `pr/${prNumber}`",
+      "  // Use gh pr checkout with custom branch name",
+      "  const result = await $`gh pr checkout ${prNumber} --branch ${localBranchName} --force`.nothrow()",
+      "",
+      "  if (result.exitCode !== 0) {",
+      '    UI.error(`Failed to checkout PR #${prNumber}. Make sure you have gh CLI installed and authenticated.`)',
+      "    process.exit(1)",
+      "  }",
+      "}",
+    ].join("\n"),
+  );
   fs.writeFileSync(path.join(root, "bin.js"), "export const installCommand = 'update';\n");
 
   const context = createContext(root);
@@ -181,5 +276,25 @@ test("patch modules rewrite a live-layout fixture modeled on evil-opencode", () 
   assert.match(
     fs.readFileSync(path.join(pluginDir, "index.ts"), "utf8"),
     /REASONIX_PLUGIN_LOADER_COMPAT_MARKER/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(cliDir, "run.ts"), "utf8"),
+    /REASONIX_RUN_FILE_ARG_COMPAT_MARKER/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(cliDir, "run.ts"), "utf8"),
+    /nargs: 1/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(cliDir, "auth.ts"), "utf8"),
+    /REASONIX_AUTH_URL_ERROR_HANDLING_MARKER/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(cliDir, "pr.ts"), "utf8"),
+    /REASONIX_PR_MERGED_FALLBACK_MARKER/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(bunDir, "index.ts"), "utf8"),
+    /REASONIX_BUN_INSTALL_RESILIENCE_MARKER/,
   );
 });
